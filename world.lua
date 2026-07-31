@@ -64,20 +64,22 @@ function World:draw()
 
             if tile and tile.visible then
 
-                love.graphics.setColor(tile.color)
-
-                love.graphics.rectangle(
-                    "fill",
+                love.graphics.draw(
+                    tile.sprite,
                     (x-1) * self.tileSize,
-                    (y-1) * self.tileSize,
-                    self.tileSize,
-                    self.tileSize
+                    (y-1) * self.tileSize
                 )
 
             end
         end
     end
 
+end
+
+function World:delete(x, y) 
+    if self.tiles[y][x] ~= nil then -- problem with this 
+        self.tiles[y][x] = 0
+    end
 end
 
 return World
