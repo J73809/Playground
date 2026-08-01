@@ -29,7 +29,7 @@ function Player:update(dt, world)
 
     self.y = self.y + self.velocityY * dt
 
-    -- ## Ground Collision ##
+    -- ## Ground and Collision ##
     if world:isSolid(
         self.x + self.width / 2,
         self.y + self.height

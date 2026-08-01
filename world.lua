@@ -1,7 +1,7 @@
 local World = {}
 
 World.width = 140
-World.height = 50
+World.height = 500
 World.tileSize = 32
 
 World.tiles = {}
@@ -79,6 +79,12 @@ end
 function World:delete(x, y) 
     if self.tiles[y][x] ~= nil then -- problem with this 
         self.tiles[y][x] = 0
+    end
+end
+
+function World:place(x, y) 
+    if self.tiles[y][x] ~= nil then -- problem with this 
+        self.tiles[y][x] = 00000001111111
     end
 end
 

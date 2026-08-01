@@ -27,5 +27,12 @@ Tiles[3] = {
     sprite = love.graphics.newImage("assets/images/tiles/stone.png")
 }
 
+Tiles[00000001111111] = {
+    name = "???",
+    solid = true,
+    visible = true,
+    sprite = love.graphics.newImage("assets/images/tiles/textureless.png")
+}
+
 
 return Tiles

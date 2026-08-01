@@ -55,7 +55,15 @@ function love.update(dt)
 
     end
 
-    if love.mouse.isDown("2") then
+    if love.mouse.isDown("1") then
+        local mouseX, mouseY = cam:mousePosition()
+
+        local y = math.floor(mouseY / World.tileSize) + 1
+        local x = math.floor(mouseX / World.tileSize) + 1
+
+        World:place(x, y)
+
+    elseif love.mouse.isDown("2") then
         local mouseX, mouseY = cam:mousePosition()
 
         local y = math.floor(mouseY / World.tileSize) + 1
@@ -94,17 +102,17 @@ function love.draw()
     cam:detach()
 
 
-    love.graphics.setShader(shaders.light)
+    --love.graphics.setShader(shaders.light)
 
     love.graphics.setColor(0, 0, 0, 0.95)
 
-    love.graphics.rectangle(
-        "fill",
-        0,
-        0,
-        width,
-        height
-    )
+    --love.graphics.rectangle(
+    --    "fill",
+    --    0,
+    --    0,
+    --    width,
+    --    height
+    --)
 
     love.graphics.setShader()
 
