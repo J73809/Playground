@@ -55,7 +55,7 @@ function love.update(dt)
 
     end
 
-    if love.mouse.isDown("1") then
+    if love.mouse.isDown(1) then
         local mouseX, mouseY = cam:mousePosition()
 
         local y = math.floor(mouseY / World.tileSize) + 1
@@ -63,7 +63,7 @@ function love.update(dt)
 
         World:place(x, y)
 
-    elseif love.mouse.isDown("2") then
+    elseif love.mouse.isDown(2) then
         local mouseX, mouseY = cam:mousePosition()
 
         local y = math.floor(mouseY / World.tileSize) + 1

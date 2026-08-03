@@ -23,12 +23,10 @@ function World:isSolid(x, y)
 end
 
 function World:generate()
-
     for y = 1, self.height do
         self.tiles[y] = {}
 
         for x = 1, self.width do
-
             local surface = 15 + math.floor(
                 love.math.noise(x * 0.1) * 10
             )
@@ -37,21 +35,33 @@ function World:generate()
                 love.math.noise(x * 0.1) * 8
             )
 
-            if y >= surface and self.tiles[y-1][x] == 0 then
-                self.tiles[y][x] = 1
-            elseif y >= surface and self.tiles[y-1][x] ~= 0 then
-                if y >= underground_surface then
+            local cave = love.math.noise(x * 0.15, y * 0.15)
+            local detailNoise = love.math.noise(x * 0.3, y * 0.3)
+
+            if y >= surface then
+                if y > surface + 3 and cave > 0.7 and detailNoise > 0.45 then
+                    self.tiles[y][x] = 0
+                elseif y >= underground_surface then
                     self.tiles[y][x] = 3
-                else 
+                else
                     self.tiles[y][x] = 2
                 end
             else
                 self.tiles[y][x] = 0
             end
-
         end
     end
 
+    for y = 2, self.height - 1 do
+        for x = 1, self.width do
+
+            if self.tiles[y][x] ~= 0
+            and self.tiles[y-1][x] == 0
+            and self.tiles[y+1][x] == 2 then
+                self.tiles[y][x] = 1
+            end
+        end
+    end
 end
 
 
@@ -76,14 +86,14 @@ function World:draw()
 
 end
 
-function World:delete(x, y) 
-    if self.tiles[y][x] ~= nil then -- problem with this 
+function World:delete(x, y)
+    if self.tiles[y][x] ~= nil then
         self.tiles[y][x] = 0
     end
 end
 
-function World:place(x, y) 
-    if self.tiles[y][x] ~= nil then -- problem with this 
+function World:place(x, y)
+    if self.tiles[y][x] == 0 then
         self.tiles[y][x] = 00000001111111
     end
 end
