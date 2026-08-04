@@ -9,7 +9,7 @@ function Player:new()
 
     self.x = 800
     self.y = 400
-    
+
     self.width = 32
     self.height = 64
 
@@ -40,7 +40,7 @@ function Player:update(dt, world)
         self.onGround = true
 
     else self.onGround = false
-    
+
     end
 
     -- ## Wall Collision ##
@@ -59,7 +59,7 @@ function Player:update(dt, world)
     ) then
 
         self.x = math.ceil(self.x / world.tileSize) * world.tileSize
-    
+
     end
 
 end

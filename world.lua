@@ -7,6 +7,10 @@ World.tileSize = 32
 World.tiles = {}
 
 local Tiles = require("tiles")
+local Particles = require("particles")
+
+local breakTimer = 0
+
 
 function World:isSolid(x, y)
 
@@ -69,26 +73,43 @@ function World:draw()
 
     for y, row in ipairs(self.tiles) do
         for x, tileID in ipairs(row) do
-
             local tile = Tiles[tileID]
 
             if tile and tile.visible then
-
                 love.graphics.draw(
                     tile.sprite,
-                    (x-1) * self.tileSize,
-                    (y-1) * self.tileSize
+                    (x - 1) * self.tileSize,
+                    (y - 1) * self.tileSize
                 )
-
             end
         end
     end
 
+    Particles:draw()
+
 end
 
-function World:delete(x, y)
-    if self.tiles[y][x] ~= nil then
-        self.tiles[y][x] = 0
+function World:delete(x, y, dt)
+    local tileId = self.tiles[y][x]
+    local breakTime = Tiles[tileId].hardness
+
+    local breaking = true
+
+    if breaking then
+        if self.tiles[y][x] ~= 0 then
+            breakTimer = breakTimer + dt
+
+            Particles:spawn((x - 1) * self.tileSize + self.tileSize / 2,
+                            (y - 1) * self.tileSize + self.tileSize / 2
+            )
+
+            if breakTimer > breakTime then
+                self.tiles[y][x] = 0
+
+                breaking = false
+                breakTimer = 0
+            end
+        end
     end
 end
 

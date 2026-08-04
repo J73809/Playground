@@ -15,6 +15,9 @@ local background
 -- ### Shaders ###
 local shaders = require("shaders")
 
+-- ### Particles ###
+local Particles = require("particles")
+
 -- ### Window ###
 local width, height = 50 * World.tileSize, 30 * World.tileSize
 love.window.setMode(width, height)
@@ -69,13 +72,15 @@ function love.update(dt)
         local y = math.floor(mouseY / World.tileSize) + 1
         local x = math.floor(mouseX / World.tileSize) + 1
 
-        World:delete(x, y)
+        World:delete(x, y, dt)
     end
 
     cam:lookAt(
         player.x + player.width / 2,
         player.y + player.height / 2
     )
+
+    Particles:update(dt)
 
 end
 
