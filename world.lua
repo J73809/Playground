@@ -86,7 +86,6 @@ function World:draw()
     end
 
     Particles:draw()
-
 end
 
 function World:delete(x, y, dt)
@@ -95,12 +94,20 @@ function World:delete(x, y, dt)
 
     local breaking = true
 
+    local color
+    if math.random(1, 3) == 1 then
+        color = Tiles[tileId].color1
+    else
+        color = Tiles[tileId].color2
+    end
+
     if breaking then
         if self.tiles[y][x] ~= 0 then
             breakTimer = breakTimer + dt
 
             Particles:spawn((x - 1) * self.tileSize + self.tileSize / 2,
-                            (y - 1) * self.tileSize + self.tileSize / 2
+                            (y - 1) * self.tileSize + self.tileSize / 2,
+                            color
             )
 
             if breakTimer > breakTime then

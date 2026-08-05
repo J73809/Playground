@@ -2,16 +2,16 @@ local Particles = {}
 
 Particles.list = {}
 
-function Particles:spawn(x, y)
+function Particles:spawn(x, y, color)
 
     table.insert(self.list, {
         x = x,
         y = y,
         vx = math.random(-100, 100),
         vy = math.random(-150, -50),
-        life = 1
+        life = 0.7,
+        color = color
     })
-
 end
 
 
@@ -31,15 +31,13 @@ function Particles:update(dt)
         if p.life <= 0 then
             table.remove(self.list, i)
         end
-
     end
-
 end
-
 
 function Particles:draw()
 
     for _, p in ipairs(self.list) do
+        love.graphics.setColor(p.color)
         love.graphics.rectangle(
             "fill",
             p.x,
@@ -48,7 +46,6 @@ function Particles:draw()
             5
         )
     end
-
 end
 
 return Particles

@@ -9,8 +9,11 @@ local World = require("world")
 local Camera = require("libraries/camera")
 local cam = Camera()
 
--- ### Background ###
-local background
+-- ### Backgrounds ###
+local sky
+local mountain_back
+local mountain_middle
+local mountain_front
 
 -- ### Shaders ###
 local shaders = require("shaders")
@@ -19,14 +22,19 @@ local shaders = require("shaders")
 local Particles = require("particles")
 
 -- ### Window ###
-local width, height = 50 * World.tileSize, 30 * World.tileSize
-love.window.setMode(width, height)
+local scr_width, scr_height = 50 * World.tileSize, 30 * World.tileSize
+love.window.setMode(scr_width, scr_height)
 
 -- ### Loads ###
 function love.load()
     player = Player:new()
 
-    background = love.graphics.newImage("assets/images/backgrounds/background.png")
+    love.graphics.setDefaultFilter("nearest", "nearest")
+
+    sky = love.graphics.newImage("assets/images/backgrounds/sky.png")
+    mountain_back = love.graphics.newImage("assets/images/backgrounds/mountains_background.png")
+    mountain_middle = love.graphics.newImage("assets/images/backgrounds/mountains_middleground.png")
+    mountain_front = love.graphics.newImage("assets/images/backgrounds/mountains_foreground.png")
 
     shaders.light:send(
         "playerPosition",
@@ -52,10 +60,8 @@ function love.update(dt)
 
     if love.keyboard.isDown("a") then
         player.x = player.x - player.velocityX * dt
-
     elseif love.keyboard.isDown("d") then
         player.x = player.x + player.velocityX * dt
-
     end
 
     if love.mouse.isDown(1) then
@@ -65,7 +71,6 @@ function love.update(dt)
         local x = math.floor(mouseX / World.tileSize) + 1
 
         World:place(x, y)
-
     elseif love.mouse.isDown(2) then
         local mouseX, mouseY = cam:mousePosition()
 
@@ -81,17 +86,81 @@ function love.update(dt)
     )
 
     Particles:update(dt)
+end
 
+-- ### Parallaxing ###
+local function drawParallax(image, cameraX, speed, y, scale)
+    local width = image:getWidth() * scale
+
+    local x = (-cameraX * speed) % width
+
+    love.graphics.draw(
+            image,
+            x - width,
+            y,
+            0,
+            scale,
+            scale
+        )
+
+    love.graphics.draw(
+        image,
+        x,
+        y,
+        0,
+        scale,
+        scale
+    )
 end
 
 -- ### Rendering ###
 function love.draw()
 
     love.graphics.setColor(1, 1, 1)
+    local scale = 4
 
+    -- ## Background Rendering ##
+
+    love.graphics.draw(
+        sky,
+        scr_width/2,
+        scr_height/2,
+        0,
+        scale,
+        scale,
+        sky:getWidth()/2,
+        sky:getHeight()/2
+    )
+
+    local camX = cam.x
+
+    drawParallax(
+        mountain_back,
+        camX,
+        0.1,
+        -50,
+        4
+    )
+
+    drawParallax(
+        mountain_middle,
+        camX,
+        0.25,
+        -20,
+        4
+    )
+
+    drawParallax(
+        mountain_front,
+        camX,
+        0.5,
+        0,
+        4
+    )
+
+    -- ## Foreground Rendering ##
     cam:attach()
 
-        love.graphics.draw(background, player.x - width/2, player.y - height/2)
 
         World:draw()
 
@@ -120,5 +189,4 @@ function love.draw()
     --)
 
     love.graphics.setShader()
-
 end
