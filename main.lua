@@ -45,6 +45,7 @@ function love.load()
     )
 
     World:generate()
+    World:convertToChunks()
 end
 
 -- ### Single Imputs ###
@@ -115,7 +116,6 @@ end
 
 -- ### Rendering ###
 function love.draw()
-
     love.graphics.setColor(1, 1, 1)
     local scale = 4
 
@@ -123,13 +123,13 @@ function love.draw()
 
     love.graphics.draw(
         sky,
-        scr_width/2,
-        scr_height/2,
+        scr_width / 2,
+        scr_height / 2,
         0,
         scale,
         scale,
-        sky:getWidth()/2,
-        sky:getHeight()/2
+        sky:getWidth() / 2,
+        sky:getHeight() / 2
     )
 
     local camX = cam.x
@@ -146,7 +146,7 @@ function love.draw()
         mountain_middle,
         camX,
         0.25,
-        -20,
+        -30,
         4
     )
 
@@ -162,16 +162,16 @@ function love.draw()
     cam:attach()
 
 
-        World:draw()
+    World:draw()
 
-        love.graphics.setColor(200/255, 40/255, 40/255)
-        love.graphics.rectangle(
-            "fill",
-            player.x,
-            player.y,
-            player.width,
-            player.height
-        )
+    love.graphics.setColor(200 / 255, 40 / 255, 40 / 255)
+    love.graphics.rectangle(
+        "fill",
+        player.x,
+        player.y,
+        player.width,
+        player.height
+    )
 
     cam:detach()
 

@@ -3,27 +3,93 @@ local World = {}
 World.width = 140
 World.height = 500
 World.tileSize = 32
+World.chunkSize = 16
 
-World.tiles = {}
+World.chunks = {}
+World.tiles = {} -- temporary old system
 
 local Tiles = require("tiles")
 local Particles = require("particles")
 
 local breakTimer = 0
 
-
 function World:isSolid(x, y)
 
     local tileX = math.floor(x / self.tileSize) + 1
     local tileY = math.floor(y / self.tileSize) + 1
 
-    local tile = self.tiles[tileY] and self.tiles[tileY][tileX]
+    local chunkX, chunkY, localX, localY = self:getChunkPosition(tileX, tileY)
 
-    if tile then
-        return Tiles[tile].solid
+    local chunk = self.chunks[chunkY] and self.chunks[chunkY][chunkX]
+
+    if chunk then
+        local tile = chunk.tiles[localY] and chunk.tiles[localY][localX]
+
+        if tile then
+            return Tiles[tile].solid
+        end
     end
 
     return false
+end
+
+function World:getChunkPosition(x, y)
+    local chunkX = math.floor((x - 1) / World.chunkSize) + 1
+    local chunkY = math.floor((y - 1) / World.chunkSize) + 1
+
+    local localX = ((x - 1) % World.chunkSize) + 1
+    local localY = ((y - 1) % World.chunkSize) + 1
+
+    return chunkX, chunkY, localX, localY
+end
+
+function World:generateChunks(chunkX, chunkY)
+    if not self.chunks[chunkY] then
+        self.chunks[chunkY] = {}
+    end
+
+    self.chunks[chunkY][chunkX] = {
+        tiles = {}
+    }
+end
+
+function World:convertToChunks()
+
+    for y, row in ipairs(self.tiles) do
+        for x, tileID in ipairs(row) do
+            self:setTile(x, y, tileID)
+        end
+    end
+end
+
+function World:setTile(x, y, id)
+    local chunkX, chunkY, localX, localY = self:getChunkPosition(x, y)
+
+    if not self.chunks[chunkY] then
+        self.chunks[chunkY] = {}
+    end
+
+    if not self.chunks[chunkY][chunkX] then
+        self:generateChunks(chunkX, chunkY)
+    end
+
+    if not self.chunks[chunkY][chunkX].tiles[localY] then
+        self.chunks[chunkY][chunkX].tiles[localY] = {}
+    end
+
+    self.chunks[chunkY][chunkX].tiles[localY][localX] = id
+end
+
+function World:getTileId(x, y)
+    local chunkX, chunkY, localX, localY = self:getChunkPosition(x, y)
+
+    local chunk = self.chunks[chunkY] and self.chunks[chunkY][chunkX]
+
+    if chunk and chunk.tiles[localY] then
+        return chunk.tiles[localY][localX]
+    end
+
+    return 0
 end
 
 function World:generate()
@@ -68,20 +134,25 @@ function World:generate()
     end
 end
 
-
 function World:draw()
 
-    for y, row in ipairs(self.tiles) do
-        for x, tileID in ipairs(row) do
-            local tile = Tiles[tileID]
+    for chunkY, column in ipairs(self.chunks) do
+        for chunkX, chunk in ipairs(column) do
 
-            if tile and tile.visible then
-                love.graphics.draw(
-                    tile.sprite,
-                    (x - 1) * self.tileSize,
-                    (y - 1) * self.tileSize
-                )
+            for y, row in ipairs(chunk.tiles) do
+                for x, tileID in ipairs(row) do
+                    local tile = Tiles[tileID]
+
+                    if tile and tile.visible then
+                        love.graphics.draw(
+                            tile.sprite,
+                            ((chunkX - 1) * self.chunkSize + (x - 1)) * self.tileSize,
+                            ((chunkY - 1) * self.chunkSize + (y - 1)) * self.tileSize
+                        )
+                    end
+                end
             end
+
         end
     end
 
@@ -89,7 +160,7 @@ function World:draw()
 end
 
 function World:delete(x, y, dt)
-    local tileId = self.tiles[y][x]
+    local tileId = self:getTileId(x, y)
     local breakTime = Tiles[tileId].hardness
 
     local breaking = true
@@ -102,7 +173,7 @@ function World:delete(x, y, dt)
     end
 
     if breaking then
-        if self.tiles[y][x] ~= 0 then
+        if tileId ~= 0 then
             breakTimer = breakTimer + dt
 
             Particles:spawn((x - 1) * self.tileSize + self.tileSize / 2,
@@ -111,7 +182,7 @@ function World:delete(x, y, dt)
             )
 
             if breakTimer > breakTime then
-                self.tiles[y][x] = 0
+                self:setTile(x, y, 0)
 
                 breaking = false
                 breakTimer = 0
@@ -121,8 +192,8 @@ function World:delete(x, y, dt)
 end
 
 function World:place(x, y)
-    if self.tiles[y][x] == 0 then
-        self.tiles[y][x] = 00000001111111
+    if self:getTileId(x, y) == 0 then
+        self:setTile(x, y, 00000001111111)
     end
 end
 
