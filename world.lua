@@ -1,12 +1,10 @@
 local World = {}
 
-World.width = 140
-World.height = 500
 World.tileSize = 32
 World.chunkSize = 16
+World.renderDistance = 3
 
 World.chunks = {}
-World.tiles = {} -- temporary old system
 
 local Tiles = require("tiles")
 local Particles = require("particles")
@@ -43,7 +41,7 @@ function World:getChunkPosition(x, y)
     return chunkX, chunkY, localX, localY
 end
 
-function World:generateChunks(chunkX, chunkY)
+function World:createChunk(chunkX, chunkY)
     if not self.chunks[chunkY] then
         self.chunks[chunkY] = {}
     end
@@ -53,6 +51,7 @@ function World:generateChunks(chunkX, chunkY)
     }
 end
 
+-- not necessary
 function World:convertToChunks()
 
     for y, row in ipairs(self.tiles) do
@@ -61,6 +60,7 @@ function World:convertToChunks()
         end
     end
 end
+-- -----
 
 function World:setTile(x, y, id)
     local chunkX, chunkY, localX, localY = self:getChunkPosition(x, y)
@@ -70,7 +70,7 @@ function World:setTile(x, y, id)
     end
 
     if not self.chunks[chunkY][chunkX] then
-        self:generateChunks(chunkX, chunkY)
+        self:createChunk(chunkX, chunkY)
     end
 
     if not self.chunks[chunkY][chunkX].tiles[localY] then
@@ -92,63 +92,86 @@ function World:getTileId(x, y)
     return 0
 end
 
-function World:generate()
-    for y = 1, self.height do
-        self.tiles[y] = {}
+function World:generateChunks(chunkX, chunkY)
+    self:createChunk(chunkX, chunkY)
 
-        for x = 1, self.width do
+    local chunk = self.chunks[chunkY][chunkX]
+
+    for y = 1, self.chunkSize do
+        chunk.tiles[y] = {}
+
+        for x = 1, self.chunkSize do
+            local worldX = (chunkX - 1) * self.chunkSize + x
+            local worldY = (chunkY - 1) * self.chunkSize + y
+
             local surface = 15 + math.floor(
-                love.math.noise(x * 0.1) * 10
+                love.math.noise(worldX * 0.1) * 10
             )
 
             local underground_surface = 28 + math.floor(
-                love.math.noise(x * 0.1) * 8
+                love.math.noise(worldX * 0.1) * 8
             )
 
-            local cave = love.math.noise(x * 0.15, y * 0.15)
-            local detailNoise = love.math.noise(x * 0.3, y * 0.3)
+            local cave = love.math.noise(worldX * 0.15, worldY * 0.15)
+            local detailNoise = love.math.noise(worldX * 0.3, worldY * 0.3)
 
-            if y >= surface then
-                if y > surface + 3 and cave > 0.7 and detailNoise > 0.45 then
-                    self.tiles[y][x] = 0
-                elseif y >= underground_surface then
-                    self.tiles[y][x] = 3
+            if worldY >= surface then
+                if worldY > surface + 3 and cave > 0.7 and detailNoise > 0.45 then
+                    chunk.tiles[y][x] = 0
+                elseif worldY >= underground_surface then
+                    chunk.tiles[y][x] = 3
                 else
-                    self.tiles[y][x] = 2
+                    chunk.tiles[y][x] = 2
                 end
             else
-                self.tiles[y][x] = 0
+                chunk.tiles[y][x] = 0
             end
         end
     end
 
-    for y = 2, self.height - 1 do
-        for x = 1, self.width do
+    for y = 2, self.chunkSize - 1 do
+        for x = 1, self.chunkSize do
 
-            if self.tiles[y][x] ~= 0
-            and self.tiles[y-1][x] == 0
-            and self.tiles[y+1][x] == 2 then
-                self.tiles[y][x] = 1
+            if chunk.tiles[y][x] ~= 0
+            and chunk.tiles[y-1][x] == 0
+            and chunk.tiles[y+1][x] == 2 then
+                chunk.tiles[y][x] = 1
             end
+
         end
     end
 end
 
-function World:draw()
+function World:draw(player)
 
-    for chunkY, column in ipairs(self.chunks) do
-        for chunkX, chunk in ipairs(column) do
+    local tileX = math.floor(player.x / self.tileSize) + 1
+    local tileY = math.floor(player.y / self.tileSize) + 1
 
-            for y, row in ipairs(chunk.tiles) do
-                for x, tileID in ipairs(row) do
-                    local tile = Tiles[tileID]
+    local chunkX, chunkY = self:getChunkPosition(tileX, tileY)
 
-                    if tile and tile.visible then
-                        love.graphics.draw(
+    for chunk_y = chunkY - self.renderDistance, chunkY + self.renderDistance do
+        for chunk_x = chunkX - self.renderDistance, chunkX + self.renderDistance do
+
+            local chunk = self.chunks[chunk_y] and self.chunks[chunk_y][chunk_x]
+
+            if not chunk then
+                self:generateChunks(chunk_x, chunk_y)
+                chunk = self.chunks[chunk_y][chunk_x]
+            end
+
+            if chunk then
+                for local_y, row in ipairs(chunk.tiles) do
+                    for local_x, tileID in ipairs(row) do
+
+                        local tile = Tiles[tileID]
+
+                        if tile and tile.visible then
+                            love.graphics.draw(
                             tile.sprite,
-                            ((chunkX - 1) * self.chunkSize + (x - 1)) * self.tileSize,
-                            ((chunkY - 1) * self.chunkSize + (y - 1)) * self.tileSize
-                        )
+                                ((chunk_x - 1) * self.chunkSize + (local_x - 1)) * self.tileSize,
+                                ((chunk_y - 1) * self.chunkSize + (local_y - 1)) * self.tileSize
+                            )
+                        end
                     end
                 end
             end

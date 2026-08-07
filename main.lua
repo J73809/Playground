@@ -44,8 +44,7 @@ function love.load()
         }
     )
 
-    World:generate()
-    World:convertToChunks()
+    World:generateChunks(2, 2)
 end
 
 -- ### Single Imputs ###
@@ -162,7 +161,7 @@ function love.draw()
     cam:attach()
 
 
-    World:draw()
+    World:draw(player)
 
     love.graphics.setColor(200 / 255, 40 / 255, 40 / 255)
     love.graphics.rectangle(
