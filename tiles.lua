@@ -36,6 +36,20 @@ Tiles[3] = {
     hardness = 1.2
 }
 
+Tiles[4] = {
+    name = "background dirt",
+    solid = false,
+    visible = true,
+    sprite = love.graphics.newImage("assets/images/tiles/background_dirt.png")
+}
+
+Tiles[5] = {
+    name = "background dirt",
+    solid = false,
+    visible = true,
+    sprite = love.graphics.newImage("assets/images/tiles/background_stone.png")
+}
+
 Tiles[00000001111111] = {
     name = "???",
     solid = true,

@@ -51,7 +51,7 @@ function World:createChunk(chunkX, chunkY)
     }
 end
 
--- not necessary
+-- not necessary for now
 function World:convertToChunks()
 
     for y, row in ipairs(self.tiles) do
@@ -92,6 +92,18 @@ function World:getTileId(x, y)
     return 0
 end
 
+function World:getTerrainHeights(x)
+    local surface = 15 + math.floor(
+        love.math.noise(x * 0.1) * 10
+    )
+
+    local underground_surface = 28 + math.floor(
+        love.math.noise(x * 0.1) * 8
+    )
+
+    return surface, underground_surface
+end
+
 function World:generateChunks(chunkX, chunkY)
     self:createChunk(chunkX, chunkY)
 
@@ -104,20 +116,18 @@ function World:generateChunks(chunkX, chunkY)
             local worldX = (chunkX - 1) * self.chunkSize + x
             local worldY = (chunkY - 1) * self.chunkSize + y
 
-            local surface = 15 + math.floor(
-                love.math.noise(worldX * 0.1) * 10
-            )
-
-            local underground_surface = 28 + math.floor(
-                love.math.noise(worldX * 0.1) * 8
-            )
+            local surface, underground_surface = self:getTerrainHeights(worldX)
 
             local cave = love.math.noise(worldX * 0.15, worldY * 0.15)
             local detailNoise = love.math.noise(worldX * 0.3, worldY * 0.3)
 
             if worldY >= surface then
                 if worldY > surface + 3 and cave > 0.7 and detailNoise > 0.45 then
-                    chunk.tiles[y][x] = 0
+                    if worldY > underground_surface then
+                        chunk.tiles[y][x] = 5
+                    else
+                        chunk.tiles[y][x] = 4
+                    end
                 elseif worldY >= underground_surface then
                     chunk.tiles[y][x] = 3
                 else
@@ -129,13 +139,76 @@ function World:generateChunks(chunkX, chunkY)
         end
     end
 
-    for y = 2, self.chunkSize - 1 do
+    for y = 2, self.chunkSize do
         for x = 1, self.chunkSize do
+            local worldX = (chunkX - 1) * self.chunkSize + x
+            local worldY = (chunkY - 1) * self.chunkSize + y
 
-            if chunk.tiles[y][x] ~= 0
-            and chunk.tiles[y-1][x] == 0
-            and chunk.tiles[y+1][x] == 2 then
-                chunk.tiles[y][x] = 1
+            local tile = self:getTileId(worldX, worldY)
+            local above = self:getTileId(worldX, worldY - 1)
+            local below = self:getTileId(worldX, worldY + 1)
+
+            if tile ~= 0
+                and above == 0
+                and below == 2 then
+                self:setTile(worldX, worldY, 1)
+            end
+        end
+    end
+end
+
+function World:loadChunk(chunkX, chunkY)
+    if not self.chunks[chunkY] then
+        self.chunks[chunkY] = {}
+    end
+
+    if not self.chunks[chunkY][chunkX] then
+        self:generateChunks(chunkX, chunkY)
+    end
+end
+
+
+function World:unloadChunk(chunkX, chunkY)
+    if self.chunks[chunkY] then
+        self.chunks[chunkY][chunkX] = nil
+
+        if next(self.chunks[chunkY]) == nil then
+            self.chunks[chunkY] = nil
+        end
+    end
+end
+
+function World:updateChunks(player)
+    local tileX = math.floor(player.x / self.tileSize) + 1
+    local tileY = math.floor(player.y / self.tileSize) + 1
+
+    local centerChunkX, centerChunkY =
+        self:getChunkPosition(tileX, tileY)
+
+    local wanted = {}
+
+    for chunkY = centerChunkY - self.renderDistance,
+                centerChunkY + self.renderDistance do
+
+        for chunkX = centerChunkX - self.renderDistance,
+                    centerChunkX + self.renderDistance do
+
+            self:loadChunk(chunkX, chunkY)
+
+            if not wanted[chunkY] then
+                wanted[chunkY] = {}
+            end
+
+            wanted[chunkY][chunkX] = true
+        end
+    end
+
+    for chunkY, row in pairs(self.chunks) do
+        for chunkX in pairs(row) do
+
+            if not wanted[chunkY]
+            or not wanted[chunkY][chunkX] then
+                self:unloadChunk(chunkX, chunkY)
             end
 
         end
@@ -153,11 +226,6 @@ function World:draw(player)
         for chunk_x = chunkX - self.renderDistance, chunkX + self.renderDistance do
 
             local chunk = self.chunks[chunk_y] and self.chunks[chunk_y][chunk_x]
-
-            if not chunk then
-                self:generateChunks(chunk_x, chunk_y)
-                chunk = self.chunks[chunk_y][chunk_x]
-            end
 
             if chunk then
                 for local_y, row in ipairs(chunk.tiles) do
@@ -185,8 +253,11 @@ end
 function World:delete(x, y, dt)
     local tileId = self:getTileId(x, y)
     local breakTime = Tiles[tileId].hardness
+    local breaking
 
-    local breaking = true
+    if Tiles[tileId].solid then
+        breaking = true
+    end
 
     local color
     if math.random(1, 3) == 1 then
@@ -194,6 +265,8 @@ function World:delete(x, y, dt)
     else
         color = Tiles[tileId].color2
     end
+
+    local surface, underground_surface = self:getTerrainHeights(x)
 
     if breaking then
         if tileId ~= 0 then
@@ -205,7 +278,15 @@ function World:delete(x, y, dt)
             )
 
             if breakTimer > breakTime then
-                self:setTile(x, y, 0)
+                if y > surface then
+                    if y > underground_surface then
+                        self:setTile(x, y, 5)
+                    else
+                        self:setTile(x, y, 4)
+                    end
+                else
+                    self:setTile(x, y, 0)
+                end
 
                 breaking = false
                 breakTimer = 0
@@ -215,7 +296,9 @@ function World:delete(x, y, dt)
 end
 
 function World:place(x, y)
-    if self:getTileId(x, y) == 0 then
+    if self:getTileId(x, y) ~= 1
+    and self:getTileId(x, y) ~= 2
+    and self:getTileId(x, y) ~= 3 then
         self:setTile(x, y, 00000001111111)
     end
 end

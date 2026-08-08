@@ -44,7 +44,7 @@ function love.load()
         }
     )
 
-    World:generateChunks(2, 2)
+    World:generateChunks(3, 3)
 end
 
 -- ### Single Imputs ###
@@ -82,31 +82,33 @@ function love.update(dt)
 
     cam:lookAt(
         player.x + player.width / 2,
-        player.y + player.height / 2
+        player.y + player.height / 2 - 120
     )
 
+    World:updateChunks(player)
     Particles:update(dt)
 end
 
 -- ### Parallaxing ###
-local function drawParallax(image, cameraX, speed, y, scale)
+local function drawParallax(image, cameraX, cameraY, horizontalSpeed, verticalSpeed, y, scale)
     local width = image:getWidth() * scale
 
-    local x = (-cameraX * speed) % width
+    local x = (-cameraX * horizontalSpeed) % width
+    local drawY = y - cameraY * verticalSpeed
 
     love.graphics.draw(
-            image,
-            x - width,
-            y,
-            0,
-            scale,
-            scale
-        )
+        image,
+        x - width,
+        drawY,
+        0,
+        scale,
+        scale
+    )
 
     love.graphics.draw(
         image,
         x,
-        y,
+        drawY,
         0,
         scale,
         scale
@@ -132,34 +134,40 @@ function love.draw()
     )
 
     local camX = cam.x
+    local camy = cam.y
 
     drawParallax(
         mountain_back,
         camX,
-        0.1,
-        -50,
+        camy,
+        0.23,
+        0.19,
+        0,
         4
     )
 
     drawParallax(
         mountain_middle,
         camX,
-        0.25,
-        -30,
+        camy,
+        0.3,
+        0.21,
+        30,
         4
     )
 
     drawParallax(
         mountain_front,
         camX,
-        0.5,
-        0,
+        camy,
+        0.4,
+        0.23,
+        80,
         4
     )
 
     -- ## Foreground Rendering ##
     cam:attach()
-
 
     World:draw(player)
 
