@@ -52,6 +52,19 @@ function love.keypressed(key)
     if key == "space" and player.onGround then
         player.velocityY = -480
     end
+
+    if key == "g" and not player.spectate then
+        player.spectate = true
+        player.gravity = 0
+        player.velocityX = player.velocityX * 5
+        player.velocityY = 0
+
+    elseif key == "g" and player.spectate then
+        player.spectate = false
+        player.gravity = 560
+        player.velocityX = player.velocityX / 5
+        player.velocityY = 100
+    end
 end
 
 -- ### Updating ###
@@ -62,6 +75,10 @@ function love.update(dt)
         player.x = player.x - player.velocityX * dt
     elseif love.keyboard.isDown("d") then
         player.x = player.x + player.velocityX * dt
+    elseif love.keyboard.isDown("w") and player.spectate then
+        player.y = player.y - player.velocityX * dt
+    elseif love.keyboard.isDown("s") and player.spectate then
+        player.y = player.y + player.velocityX * dt
     end
 
     if love.mouse.isDown(1) then
@@ -71,6 +88,7 @@ function love.update(dt)
         local x = math.floor(mouseX / World.tileSize) + 1
 
         World:place(x, y)
+
     elseif love.mouse.isDown(2) then
         local mouseX, mouseY = cam:mousePosition()
 
@@ -140,7 +158,7 @@ function love.draw()
         mountain_back,
         camX,
         camy,
-        0.23,
+        0.20,
         0.19,
         0,
         4
@@ -150,7 +168,7 @@ function love.draw()
         mountain_middle,
         camX,
         camy,
-        0.3,
+        0.25,
         0.21,
         30,
         4
@@ -160,7 +178,7 @@ function love.draw()
         mountain_front,
         camX,
         camy,
-        0.4,
+        0.3,
         0.23,
         80,
         4
@@ -196,4 +214,11 @@ function love.draw()
     --)
 
     love.graphics.setShader()
+
+    -- print(
+    --     "x:", player.x,
+    --     "right:", player.x + player.width,
+    --     "tile left:", math.floor(player.x / World.tileSize) + 1,
+    --     "tile right:", math.floor((player.x + player.width) / World.tileSize) + 1
+    -- )
 end

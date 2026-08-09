@@ -118,11 +118,11 @@ function World:generateChunks(chunkX, chunkY)
 
             local surface, underground_surface = self:getTerrainHeights(worldX)
 
-            local cave = love.math.noise(worldX * 0.15, worldY * 0.15)
-            local detailNoise = love.math.noise(worldX * 0.3, worldY * 0.3)
+            local cave = love.math.noise(worldX * 0.065, worldY * 0.078)
+            local detailNoise = love.math.noise(worldX * 0.1, worldY * 0.1)
 
             if worldY >= surface then
-                if worldY > surface + 3 and cave > 0.7 and detailNoise > 0.45 then
+                if worldY > surface + 5 and cave > 0.6 and detailNoise > 0.08 then
                     if worldY > underground_surface then
                         chunk.tiles[y][x] = 5
                     else
