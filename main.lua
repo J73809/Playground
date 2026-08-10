@@ -5,6 +5,12 @@ local player
 -- ### World ###
 local World = require("world")
 
+-- ### Physics Engine ###
+local wf = require("libraries/windfield")
+
+local physicsWorld = wf.newWorld()
+local playerHitbox
+
 -- ### Camera ###
 local Camera = require("libraries/camera")
 local cam = Camera()
@@ -21,6 +27,37 @@ local shaders = require("shaders")
 -- ### Particles ###
 local Particles = require("particles")
 
+-- ### Debugging ###
+local debug = false
+
+local function drawDebug()
+    local x = 10
+    local y = 10
+    local spacing = 18
+    local debugFont = love.graphics.newFont("assets/fonts/JetBrainsMono-Regular.ttf", 18)
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.setFont(debugFont)
+
+    love.graphics.print("FPS: " .. love.timer.getFPS(), x, y)
+    love.graphics.print(
+        string.format("X: %.1f  |  Y: %.1f", player.x, player.y),
+        x, y + spacing
+    )
+    love.graphics.print(
+        string.format(
+            "Velocity: %.1f, %.1f",
+            playerHitbox:getLinearVelocity()
+        ),
+        x, y + spacing * 2
+    )
+
+    love.graphics.print(
+        "State: " .. (player.spectate and "Spectating" or
+            (player.onGround and "Grounded" or "Airborne")),
+        x, y + spacing * 3
+    )
+end
+
 -- ### Window ###
 local scr_width, scr_height = 50 * World.tileSize, 30 * World.tileSize
 love.window.setMode(scr_width, scr_height)
@@ -28,6 +65,21 @@ love.window.setMode(scr_width, scr_height)
 -- ### Loads ###
 function love.load()
     player = Player:new()
+    playerHitbox = physicsWorld:newBSGRectangleCollider(
+        player.x,
+        player.y,
+        player.width,
+        player.height,
+        5
+    )
+    playerHitbox:setFixedRotation(true)
+    playerHitbox:setFriction(0)
+    physicsWorld:setGravity(0, player.gravity)
+
+    physicsWorld:addCollisionClass("Player")
+    physicsWorld:addCollisionClass("Ground")
+
+    playerHitbox:setCollisionClass("Player")
 
     love.graphics.setDefaultFilter("nearest", "nearest")
 
@@ -50,36 +102,67 @@ end
 -- ### Single Imputs ###
 function love.keypressed(key)
     if key == "space" and player.onGround then
-        player.velocityY = -480
+        playerHitbox:applyLinearImpulse(0, player.velocityY)
+    end
+
+    if key == "f3" and not debug then
+        debug = true
+    elseif key == "f3" and debug then
+        debug = false
     end
 
     if key == "g" and not player.spectate then
         player.spectate = true
-        player.gravity = 0
-        player.velocityX = player.velocityX * 5
-        player.velocityY = 0
+        physicsWorld:setGravity(0, 0)
 
     elseif key == "g" and player.spectate then
         player.spectate = false
-        player.gravity = 560
-        player.velocityX = player.velocityX / 5
-        player.velocityY = 100
+        physicsWorld:setGravity(0, player.gravity)
     end
 end
 
 -- ### Updating ###
 function love.update(dt)
-    player:update(dt, World)
+    player.onGround = false
+
+    local pvx, pvy = playerHitbox:getLinearVelocity()
+    local maxSpeed = 320
 
     if love.keyboard.isDown("a") then
-        player.x = player.x - player.velocityX * dt
+        playerHitbox:applyForce(-player.velocityX, 0)
     elseif love.keyboard.isDown("d") then
-        player.x = player.x + player.velocityX * dt
+        playerHitbox:applyForce(player.velocityX, 0)
     elseif love.keyboard.isDown("w") and player.spectate then
-        player.y = player.y - player.velocityX * dt
+        playerHitbox:applyForce(0, player.velocityY)
     elseif love.keyboard.isDown("s") and player.spectate then
-        player.y = player.y + player.velocityX * dt
+        playerHitbox:applyForce(0, -player.velocityY)
     end
+
+    if pvx > maxSpeed then
+        pvx = maxSpeed
+    elseif pvx < -maxSpeed then
+        pvx = -maxSpeed
+    end
+
+    if not love.keyboard.isDown("a") and not love.keyboard.isDown("d") then pvx = pvx * 0.85 end
+
+    playerHitbox:setLinearVelocity(pvx, pvy)
+
+    playerHitbox:setPreSolve(function(collider1, collider2, contact)
+        local nx, ny = contact:getNormal()
+
+        if collider2.collision_class == "Ground" then
+            if ny > 0.5 then
+                player.onGround = true
+            end
+        end
+    end)
+
+    physicsWorld:update(dt)
+    World:checkColliders(player, physicsWorld)
+
+    player.x = playerHitbox:getX() - player.width / 2
+    player.y = playerHitbox:getY() - player.height / 2
 
     if love.mouse.isDown(1) then
         local mouseX, mouseY = cam:mousePosition()
@@ -198,8 +281,11 @@ function love.draw()
         player.height
     )
 
+    if debug then physicsWorld:draw() end
+
     cam:detach()
 
+    if debug then drawDebug() end
 
     --love.graphics.setShader(shaders.light)
 
