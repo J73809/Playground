@@ -3,7 +3,7 @@ local Player = {}
 
 Player.__index = Player
 
-function Player:new()
+function Player:new(settigs)
 
     local self = setmetatable({}, Player)
 
@@ -13,10 +13,10 @@ function Player:new()
     self.width = 32
     self.height = 64
 
-    self.velocityX = 2000
-    self.velocityY = -1800
+    self.velocityX = settigs.playerVelocityX
+    self.velocityY = settigs.playerVelocityY
 
-    self.gravity = 560
+    self.gravity = settigs.gravity
     self.onGround = false
     self.spectate = false
 

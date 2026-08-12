@@ -1,15 +1,14 @@
 local World = {}
 
+local Tiles = require("tiles")
+local Particles = require("particles")
+local Settings = require("settings")
+
 World.tileSize = 32
 World.chunkSize = 16
-World.renderDistance = 3
-World.physicsDistance = 12
 
 World.chunks = {}
 World.colliders = {}
-
-local Tiles = require("tiles")
-local Particles = require("particles")
 
 local breakTimer = 0
 
@@ -185,13 +184,14 @@ function World:updateChunks(player)
     local tileY = math.floor(player.y / self.tileSize) + 1
 
     local centerChunkX, centerChunkY = self:getChunkPosition(tileX, tileY)
+    local renderDistance = math.floor(Settings.renderDistance)
 
     local wanted = {}
 
-    for chunkY = centerChunkY - self.renderDistance,
-    centerChunkY + self.renderDistance do
-        for chunkX = centerChunkX - self.renderDistance,
-        centerChunkX + self.renderDistance do
+    for chunkY = centerChunkY - renderDistance,
+                centerChunkY + renderDistance do
+        for chunkX = centerChunkX - renderDistance,
+                    centerChunkX + renderDistance do
             self:loadChunk(chunkX, chunkY)
 
             if not wanted[chunkY] then
@@ -219,26 +219,31 @@ function World:checkColliders(player, pWorld)
 
     self.colliders = {}
 
-    local playerX = math.floor(player.x / self.tileSize)
-    local playerY = math.floor(player.y / self.tileSize)
+    local playerX = math.floor(player.x / self.tileSize) + 1
+    local playerY = math.floor(player.y / self.tileSize) + 1
+
+    local physicsDistance = math.floor(Settings.hitboxRenderDistance)
 
     if not player.spectate then
-        for y = playerY - self.physicsDistance, playerY + self.physicsDistance do
-            for x = playerX - self.physicsDistance, playerX + self.physicsDistance do
+        for y = playerY - physicsDistance,
+                playerY + physicsDistance do
+
+            for x = playerX - physicsDistance,
+                    playerX + physicsDistance do
+
                 local tileId = self:getTileId(x, y)
 
-                if tileId and Tiles[tileId].solid then
-                    local padding = 0
-
+                if tileId ~= 0 and Tiles[tileId].solid then
                     local collider = pWorld:newRectangleCollider(
                         (x - 1) * self.tileSize,
                         (y - 1) * self.tileSize,
-                        self.tileSize - padding * 2,
-                        self.tileSize - padding * 2
+                        self.tileSize,
+                        self.tileSize
                     )
 
                     collider:setType("static")
                     collider:setCollisionClass("Ground")
+
                     table.insert(self.colliders, collider)
                 end
             end
@@ -252,9 +257,12 @@ function World:draw(player)
     local tileY = math.floor(player.y / self.tileSize) + 1
 
     local chunkX, chunkY = self:getChunkPosition(tileX, tileY)
+    local renderDistance = math.floor(Settings.renderDistance)
 
-    for chunk_y = chunkY - self.renderDistance, chunkY + self.renderDistance do
-        for chunk_x = chunkX - self.renderDistance, chunkX + self.renderDistance do
+    for chunk_y = chunkY - renderDistance,
+                   chunkY + renderDistance do
+        for chunk_x = chunkX - renderDistance,
+                       chunkX + renderDistance do
 
             local chunk = self.chunks[chunk_y] and self.chunks[chunk_y][chunk_x]
 

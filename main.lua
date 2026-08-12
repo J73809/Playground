@@ -58,13 +58,18 @@ local function drawDebug()
     )
 end
 
+-- ### Settings ###
+local Settings = require("settings")
+local SettingsMenu = require("settingsMenu")
+local sOpen = false
+
 -- ### Window ###
 local scr_width, scr_height = 50 * World.tileSize, 30 * World.tileSize
 love.window.setMode(scr_width, scr_height)
 
 -- ### Loads ###
 function love.load()
-    player = Player:new()
+    player = Player:new(Settings)
     playerHitbox = physicsWorld:newBSGRectangleCollider(
         player.x,
         player.y,
@@ -74,7 +79,7 @@ function love.load()
     )
     playerHitbox:setFixedRotation(true)
     playerHitbox:setFriction(0)
-    physicsWorld:setGravity(0, player.gravity)
+    physicsWorld:setGravity(0, Settings.gravity)
 
     physicsWorld:addCollisionClass("Player")
     physicsWorld:addCollisionClass("Ground")
@@ -101,23 +106,31 @@ end
 
 -- ### Single Imputs ###
 function love.keypressed(key)
-    if key == "space" and player.onGround then
-        playerHitbox:applyLinearImpulse(0, player.velocityY)
+    if not sOpen then
+        if key == "space" and player.onGround then
+            playerHitbox:applyLinearImpulse(0, Settings.playerVelocityY)
+        end
+
+        if key == "f3" and not debug then
+            debug = true
+        elseif key == "f3" and debug then
+            debug = false
+        end
+
+        if key == "g" and not player.spectate then
+            player.spectate = true
+            physicsWorld:setGravity(0, 0)
+        elseif key == "g" and player.spectate then
+            player.spectate = false
+            physicsWorld:setGravity(0, Settings.gravity)
+        end
     end
 
-    if key == "f3" and not debug then
-        debug = true
-    elseif key == "f3" and debug then
-        debug = false
-    end
+    if key == "escape" and not sOpen then
+        sOpen = true
 
-    if key == "g" and not player.spectate then
-        player.spectate = true
-        physicsWorld:setGravity(0, 0)
-
-    elseif key == "g" and player.spectate then
-        player.spectate = false
-        physicsWorld:setGravity(0, player.gravity)
+    elseif key == "escape" and sOpen then
+        sOpen = false
     end
 end
 
@@ -125,60 +138,70 @@ end
 function love.update(dt)
     player.onGround = false
 
+    if not player.spectate then
+        physicsWorld:setGravity(0, Settings.gravity)
+    end
+
     local pvx, pvy = playerHitbox:getLinearVelocity()
-    local maxSpeed = 320
+    local maxSpeed = Settings.playerMaxSpeed
 
-    if love.keyboard.isDown("a") then
-        playerHitbox:applyForce(-player.velocityX, 0)
-    elseif love.keyboard.isDown("d") then
-        playerHitbox:applyForce(player.velocityX, 0)
-    elseif love.keyboard.isDown("w") and player.spectate then
-        playerHitbox:applyForce(0, player.velocityY)
-    elseif love.keyboard.isDown("s") and player.spectate then
-        playerHitbox:applyForce(0, -player.velocityY)
-    end
-
-    if pvx > maxSpeed then
-        pvx = maxSpeed
-    elseif pvx < -maxSpeed then
-        pvx = -maxSpeed
-    end
-
-    if not love.keyboard.isDown("a") and not love.keyboard.isDown("d") then pvx = pvx * 0.85 end
-
-    playerHitbox:setLinearVelocity(pvx, pvy)
-
-    playerHitbox:setPreSolve(function(collider1, collider2, contact)
-        local nx, ny = contact:getNormal()
-
-        if collider2.collision_class == "Ground" then
-            if ny > 0.5 then
-                player.onGround = true
-            end
+    if not sOpen then
+        if love.keyboard.isDown("a") then
+            playerHitbox:applyForce(-player.velocityX, 0)
+        elseif love.keyboard.isDown("d") then
+            playerHitbox:applyForce(player.velocityX, 0)
+        elseif love.keyboard.isDown("w") and player.spectate then
+            playerHitbox:applyForce(0, player.velocityY)
+        elseif love.keyboard.isDown("s") and player.spectate then
+            playerHitbox:applyForce(0, -player.velocityY)
         end
-    end)
 
-    physicsWorld:update(dt)
+        if pvx > maxSpeed then
+            pvx = maxSpeed
+        elseif pvx < -maxSpeed then
+            pvx = -maxSpeed
+        end
+
+        if not love.keyboard.isDown("a") and not love.keyboard.isDown("d") then pvx = pvx * 0.85 end
+
+        playerHitbox:setLinearVelocity(pvx, pvy)
+
+        playerHitbox:setPreSolve(function(collider1, collider2, contact)
+            local nx, ny = contact:getNormal()
+
+            if collider2.collision_class == "Ground" then
+                if ny > 0.5 then
+                    player.onGround = true
+                end
+            end
+        end)
+    end
+
+    World:updateChunks(player)
     World:checkColliders(player, physicsWorld)
+    physicsWorld:update(dt)
 
-    player.x = playerHitbox:getX() - player.width / 2
-    player.y = playerHitbox:getY() - player.height / 2
+    if not sOpen then
 
-    if love.mouse.isDown(1) then
-        local mouseX, mouseY = cam:mousePosition()
+        player.x = playerHitbox:getX() - player.width / 2
+        player.y = playerHitbox:getY() - player.height / 2
 
-        local y = math.floor(mouseY / World.tileSize) + 1
-        local x = math.floor(mouseX / World.tileSize) + 1
+        if love.mouse.isDown(1) then
+            local mouseX, mouseY = cam:mousePosition()
 
-        World:place(x, y)
+            local y = math.floor(mouseY / World.tileSize) + 1
+            local x = math.floor(mouseX / World.tileSize) + 1
 
-    elseif love.mouse.isDown(2) then
-        local mouseX, mouseY = cam:mousePosition()
+            World:place(x, y)
 
-        local y = math.floor(mouseY / World.tileSize) + 1
-        local x = math.floor(mouseX / World.tileSize) + 1
+        elseif love.mouse.isDown(2) then
+            local mouseX, mouseY = cam:mousePosition()
 
-        World:delete(x, y, dt)
+            local y = math.floor(mouseY / World.tileSize) + 1
+            local x = math.floor(mouseX / World.tileSize) + 1
+
+            World:delete(x, y, dt)
+        end
     end
 
     cam:lookAt(
@@ -186,7 +209,10 @@ function love.update(dt)
         player.y + player.height / 2 - 120
     )
 
-    World:updateChunks(player)
+    if sOpen then
+        SettingsMenu:update()
+    end
+
     Particles:update(dt)
 end
 
@@ -241,8 +267,8 @@ function love.draw()
         mountain_back,
         camX,
         camy,
-        0.20,
-        0.19,
+        Settings.mountainBackSpeedX,
+        Settings.mountainBackSpeedY,
         0,
         4
     )
@@ -251,8 +277,8 @@ function love.draw()
         mountain_middle,
         camX,
         camy,
-        0.25,
-        0.21,
+        Settings.mountainMiddleSpeedX,
+        Settings.mountainMiddleSpeedY,
         30,
         4
     )
@@ -261,8 +287,8 @@ function love.draw()
         mountain_front,
         camX,
         camy,
-        0.3,
-        0.23,
+        Settings.mountainFrontSpeedX,
+        Settings.mountainFrontSpeedY,
         80,
         4
     )
@@ -301,10 +327,8 @@ function love.draw()
 
     love.graphics.setShader()
 
-    -- print(
-    --     "x:", player.x,
-    --     "right:", player.x + player.width,
-    --     "tile left:", math.floor(player.x / World.tileSize) + 1,
-    --     "tile right:", math.floor((player.x + player.width) / World.tileSize) + 1
-    -- )
+    if sOpen then
+        SettingsMenu:draw()
+    end
+
 end
