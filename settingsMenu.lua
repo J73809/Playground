@@ -102,6 +102,7 @@ local sections = {
 }
 
 local menu = love.graphics.newImage("assets/images/ui/settings_menu.png")
+menu:setFilter("nearest", "nearest")
 
 local menuX = 400
 local menuY = 240

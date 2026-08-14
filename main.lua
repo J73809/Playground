@@ -16,13 +16,17 @@ local Camera = require("libraries/camera")
 local cam = Camera()
 
 -- ### Backgrounds ###
-local sky
+local skyDay
+local skyNight
 local mountain_back
 local mountain_middle
 local mountain_front
 
 -- ### Shaders ###
 local shaders = require("shaders")
+
+-- ### Day/Night Cycle ###
+local DayNight = require("daynight")
 
 -- ### Particles ###
 local Particles = require("particles")
@@ -88,7 +92,8 @@ function love.load()
 
     love.graphics.setDefaultFilter("nearest", "nearest")
 
-    sky = love.graphics.newImage("assets/images/backgrounds/sky.png")
+    skyDay = love.graphics.newImage("assets/images/backgrounds/sky.png")
+    skyNight = love.graphics.newImage("assets/images/backgrounds/sky_night.png")
     mountain_back = love.graphics.newImage("assets/images/backgrounds/mountains_background.png")
     mountain_middle = love.graphics.newImage("assets/images/backgrounds/mountains_middleground.png")
     mountain_front = love.graphics.newImage("assets/images/backgrounds/mountains_foreground.png")
@@ -96,8 +101,8 @@ function love.load()
     shaders.light:send(
         "playerPosition",
         {
-            player.x,
-            player.y + player.height
+            player.x - player.width / 1.5,
+            player.y + player.height * 2.5
         }
     )
 
@@ -109,6 +114,10 @@ function love.keypressed(key)
     if not sOpen then
         if key == "space" and player.onGround then
             playerHitbox:applyLinearImpulse(0, Settings.playerVelocityY)
+        end
+
+        if key == "t" then
+            Settings:toggleSwitch()
         end
 
         if key == "f3" and not debug then
@@ -213,6 +222,23 @@ function love.update(dt)
         SettingsMenu:update()
     end
 
+    if Settings.nightCycle then
+        DayNight:update(dt)
+        local darkness = DayNight:getDarkness()
+
+        local minRadius = 250
+        local maxRadius = 600
+
+        local lightRadius = maxRadius - (maxRadius - minRadius) * darkness
+
+        local lightFalloff = 1.5 + darkness * 2.5
+
+        shaders.light:send("nightAmount", darkness)
+        shaders.light:send("lightRadius", lightRadius)
+        shaders.light:send("lightFalloff", lightFalloff)
+
+    end
+
     Particles:update(dt)
 end
 
@@ -249,19 +275,47 @@ function love.draw()
 
     -- ## Background Rendering ##
 
+    local darkness = DayNight:getDarkness()
+
+    love.graphics.setColor(1, 1, 1, 1)
     love.graphics.draw(
-        sky,
+        skyDay,
         scr_width / 2,
         scr_height / 2,
         0,
         scale,
         scale,
-        sky:getWidth() / 2,
-        sky:getHeight() / 2
+        skyDay:getWidth() / 2,
+        skyDay:getHeight() / 2
     )
+
+    if Settings.nightCycle then
+        love.graphics.setColor(1, 1, 1, darkness)
+        love.graphics.draw(
+            skyNight,
+            scr_width / 2,
+            scr_height / 2,
+            0,
+            scale,
+            scale,
+            skyNight:getWidth() / 2,
+            skyNight:getHeight() / 2
+        )
+    end
 
     local camX = cam.x
     local camy = cam.y
+
+    if Settings.nightCycle then
+        love.graphics.setColor(
+            1 - darkness * 0.7,
+            1 - darkness * 0.7,
+            1 - darkness * 0.5,
+            1
+        )
+    else
+        love.graphics.setColor(1, 1, 1, 1)
+    end
 
     drawParallax(
         mountain_back,
@@ -293,6 +347,9 @@ function love.draw()
         4
     )
 
+
+    love.graphics.setColor(1, 1, 1)
+
     -- ## Foreground Rendering ##
     cam:attach()
 
@@ -311,22 +368,37 @@ function love.draw()
 
     cam:detach()
 
-    if debug then drawDebug() end
 
-    --love.graphics.setShader(shaders.light)
+    love.graphics.setShader(shaders.light)
 
-    love.graphics.setColor(0, 0, 0, 0.95)
-
-    --love.graphics.rectangle(
-    --    "fill",
-    --    0,
-    --    0,
-    --    width,
-    --    height
-    --)
+    love.graphics.rectangle(
+       "fill",
+       0,
+       0,
+       scr_width,
+       scr_height
+    )
 
     love.graphics.setShader()
 
+    love.graphics.setColor(
+        1 - darkness * 0.8,
+        1 - darkness * 0.8,
+        1 - darkness * 0.5,
+        darkness * 0.3
+    )
+
+    if Settings.nightCycle then
+        love.graphics.rectangle(
+            "fill",
+            0,
+            0,
+            scr_width,
+            scr_height
+        )
+    end
+
+    if debug then drawDebug() end
     if sOpen then
         SettingsMenu:draw()
     end

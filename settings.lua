@@ -14,10 +14,15 @@ local Settings = {
     mountainBackSpeedY = 0.20,
     mountainMiddleSpeedY = 0.25,
     mountainFrontSpeedY = 0.3,
+
+    nightCycle = true
 }
 
 local slider = love.graphics.newImage("assets/images/ui/slider.png")
 local knob = love.graphics.newImage("assets/images/ui/knob.png")
+
+slider:setFilter("nearest", "nearest")
+knob:setFilter("nearest", "nearest")
 
 local draggingSlider = nil
 
