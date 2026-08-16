@@ -1,5 +1,4 @@
-# Placeholder
-# Love2D Terraria-Style Prototype
+# Love2D Sandbox Prototype
 
 A small Terraria-inspired 2D sandbox prototype made with **Lua and LÖVE2D**.
 
