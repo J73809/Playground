@@ -10,6 +10,8 @@ World.chunkSize = 16
 World.chunks = {}
 World.colliders = {}
 
+World.changes = {}
+
 local breakTimer = 0
 
 function World:isSolid(x, y)
@@ -156,6 +158,8 @@ function World:generateChunks(chunkX, chunkY)
             end
         end
     end
+
+    self:applyChanges(chunkX, chunkY)
 end
 
 function World:loadChunk(chunkX, chunkY)
@@ -168,6 +172,41 @@ function World:loadChunk(chunkX, chunkY)
     end
 end
 
+function World:setChange(x, y, id)
+    if not self.changes[x] then
+        self.changes[x] = {}
+    end
+
+    self.changes[x][y] = id
+end
+
+function World:getChange(x, y)
+    if self.changes[x] then
+        return self.changes[x][y]
+    end
+
+    return nil
+end
+
+function World:applyChanges(chunkX, chunkY)
+    local startX = (chunkX - 1) * self.chunkSize + 1
+    local startY = (chunkY - 1) * self.chunkSize + 1
+
+    local endX = startX + self.chunkSize - 1
+    local endY = startY + self.chunkSize - 1
+
+    for x = startX, endX do
+        if self.changes[x] then
+            for y = startY, endY do
+                local change = self.changes[x][y]
+
+                if change ~= nil then
+                    self:setTile(x, y, change)
+                end
+            end
+        end
+    end
+end
 
 function World:unloadChunk(chunkX, chunkY)
     if self.chunks[chunkY] then
@@ -312,8 +351,8 @@ function World:delete(x, y, dt)
             breakTimer = breakTimer + dt
 
             Particles:spawn((x - 1) * self.tileSize + self.tileSize / 2,
-                            (y - 1) * self.tileSize + self.tileSize / 2,
-                            color
+                (y - 1) * self.tileSize + self.tileSize / 2,
+                color
             )
 
             if breakTimer > breakTime then
@@ -332,14 +371,18 @@ function World:delete(x, y, dt)
             end
         end
     end
+
+    self:setChange(x, y, self:getTileId(x, y))
 end
 
 function World:place(x, y)
     if self:getTileId(x, y) ~= 1
-    and self:getTileId(x, y) ~= 2
-    and self:getTileId(x, y) ~= 3 then
+        and self:getTileId(x, y) ~= 2
+        and self:getTileId(x, y) ~= 3 then
         self:setTile(x, y, 00000001111111)
     end
+
+    self:setChange(x, y, 00000001111111)
 end
 
 return World
